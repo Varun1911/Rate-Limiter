@@ -1,17 +1,22 @@
 import Redis from "ioredis";
 
-const url = process.env.REDIS_URL;
+let redis: Redis | null = null;
 
-if (!url) {
-  throw new Error("REDIS_URL not configured");
-}
+export const getRedis = (): Redis => {
+  if (!redis) {
+    const url = process.env.REDIS_URL;
+    if (!url) {
+      throw new Error("REDIS_URL not configured");
+    }
 
-export const redis = new Redis(url);
+    redis = new Redis(url);
 
-redis.on("connect", () => {
-  console.log("Redis connected");
-});
+    redis.on("connect", () => console.log("Redis connected"));
+    redis.on("ready", () => console.log("Redis ready"));
+    redis.on("error", (err) =>
+      console.error("Redis connection error:", err)
+    );
+  }
 
-redis.on("error", (err) => {
-  console.error("Redis error:", err);
-});
+  return redis;
+};

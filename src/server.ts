@@ -1,12 +1,14 @@
 import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
+import limiterRoutes from "./routes/limiter.routes.js";
+import { ApiError } from "./utils/ApiError";
+import { ApiResponse } from "./utils/ApiResponse";
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
-// ---- Health ----
 app.get("/health", (_: Request, res: Response) => {
   res.json({ status: "ok" });
 });
@@ -28,14 +30,20 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-app.post("/check", async (req: Request, res: Response) => {
-  res.json({ message: "not implemented yet" });
-});
+app.use("/api/v1/limiter", limiterRoutes);
 
-// ---- Error Handler ----
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
-  return res.status(500).json({ message: "Something went wrong" });
+
+  if (err instanceof ApiError) {
+    return res
+      .status(err.statusCode)
+      .json(new ApiResponse(false, undefined, undefined, err.message));
+  }
+
+  return res
+    .status(500)
+    .json(new ApiResponse(false, undefined, "Internal Server Error"));
 });
 
 const port = process.env.PORT || 4000;
